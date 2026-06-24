@@ -1,0 +1,41 @@
+services:
+
+  postgres:
+    image: postgres:15
+    container_name: postgres_local
+    environment:
+      POSTGRES_DB: employeedb
+      POSTGRES_USER: appuser
+      POSTGRES_PASSWORD: secret123
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U appuser -d employeedb"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  api:
+    build: .
+    container_name: api_local
+    ports:
+      - "8000:8000"
+    environment:
+      # DB_HOST is "postgres" — the service name above, not localhost.
+      # Docker Compose creates a network where containers find each other by service name.
+      # This is identical to how K8s Services work in Phase 3-4.
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: employeedb
+      DB_USER: appuser
+      DB_PASSWORD: secret123
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: on-failure
+
+volumes:
+  pgdata:
